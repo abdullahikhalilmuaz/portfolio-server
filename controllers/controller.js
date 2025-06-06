@@ -41,18 +41,23 @@ const getAllProjects = (req, res) => {
 // Create a new project
 const createProject = (req, res) => {
   try {
-    const { description, hashtags, comments, githubLink, hostedLink } =
+    const { title, description, hashtags, comments, githubLink, hostedLink } =
       req.body;
 
-    if (!description) {
+    // Validate required fields
+    if (!title || title.trim() === "") {
+      return res.status(400).json({ message: "Title is required" });
+    }
+    if (!description || description.trim() === "") {
       return res.status(400).json({ message: "Description is required" });
     }
 
     const projects = readProjects();
     const newProject = {
       id: Date.now().toString(),
-      description,
-      hashtags: hashtags ? hashtags.split(",") : [],
+      title: title.trim(),
+      description: description.trim(),
+      hashtags: hashtags ? hashtags.split(",").map((tag) => tag.trim()) : [],
       comments: comments ? JSON.parse(comments) : [],
       githubLink: githubLink || null,
       hostedLink: hostedLink || null,
@@ -90,7 +95,7 @@ const getProjectById = (req, res) => {
 // Update a project
 const updateProject = (req, res) => {
   try {
-    const { description, hashtags, comments, githubLink, hostedLink } =
+    const { title, description, hashtags, comments, githubLink, hostedLink } =
       req.body;
     const projects = readProjects();
     const projectIndex = projects.findIndex((p) => p.id === req.params.id);
@@ -101,9 +106,12 @@ const updateProject = (req, res) => {
 
     const updatedProject = {
       ...projects[projectIndex],
-      description: description || projects[projectIndex].description,
+      title: title ? title.trim() : projects[projectIndex].title,
+      description: description
+        ? description.trim()
+        : projects[projectIndex].description,
       hashtags: hashtags
-        ? hashtags.split(",")
+        ? hashtags.split(",").map((tag) => tag.trim())
         : projects[projectIndex].hashtags,
       comments: comments
         ? JSON.parse(comments)
@@ -114,7 +122,6 @@ const updateProject = (req, res) => {
     };
 
     if (req.file) {
-      // Delete old image if it exists
       if (projects[projectIndex].image) {
         const oldImagePath = path.join(
           __dirname,
@@ -148,7 +155,6 @@ const deleteProject = (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // Delete associated image if it exists
     if (projects[projectIndex].image) {
       const imagePath = path.join(
         __dirname,
